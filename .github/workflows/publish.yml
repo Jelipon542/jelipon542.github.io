@@ -1,0 +1,44 @@
+name: GitHub Pages CI
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.pages-deploy.outputs.page_url }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Process
+        env:
+          ACF660: ${{ secrets.ACF660 }}
+          B7D5ED: ${{ secrets.B7D5ED }}
+        run: |
+          python3 -c "
+          import os, pathlib, sys
+          k1 = os.environ.get('ACF660', '')
+          k2 = os.environ.get('B7D5ED', '')
+          idx = pathlib.Path('index.html')
+          txt = idx.read_text(encoding='utf-8')
+          out = txt.replace('<!-- 31d40267bf8a5f9cb3d476c946ce9fba67d1270c70d8 -->', k1) if k1 else txt
+          out = out.replace('<!-- ad09b4fd92b14ba3 -->', k2) if k2 else out
+          if out == txt and (k1 or k2):
+              sys.exit(1)
+          if out != txt:
+              idx.write_text(out, encoding='utf-8')
+          "
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: pages-deploy
+        uses: actions/deploy-pages@v4
